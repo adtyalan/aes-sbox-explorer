@@ -1,4 +1,5 @@
 import sbox_logic
+import os
 
 # Konstanta AES (Rcon)
 Rcon = [
@@ -146,44 +147,65 @@ def unpad(data):
     padding_len = data[-1]
     return data[:-padding_len]
 
+# ==========================================
+# FUNGSI WRAPPER (MODE CBC DIIMPLEMENTASIKAN DI SINI)
+# ==========================================
+
 def encrypt_text(key_bytes, text, sbox, inv_sbox):
-    aes = ModifiedAES(key_bytes, sbox, inv_sbox)
-    padded_text = pad(text.encode('utf-8'))
-    encrypted = b""
-    for i in range(0, len(padded_text), 16):
-        block = padded_text[i:i+16]
-        encrypted += aes.encrypt_block(block)
-    return encrypted.hex()
+    return encrypt_data(key_bytes, text.encode('utf-8'), sbox, inv_sbox).hex()
 
 def decrypt_text(key_bytes, hex_text, sbox, inv_sbox):
-    aes = ModifiedAES(key_bytes, sbox, inv_sbox)
-    encrypted_bytes = bytes.fromhex(hex_text)
-    decrypted = b""
-    for i in range(0, len(encrypted_bytes), 16):
-        block = encrypted_bytes[i:i+16]
-        decrypted += aes.decrypt_block(block)
-    return unpad(decrypted).decode('utf-8')
+    return decrypt_data(key_bytes, bytes.fromhex(hex_text), sbox, inv_sbox).decode('utf-8')
 
 def encrypt_data(key_bytes, data_bytes, sbox, inv_sbox):
-    """Fungsi generik untuk mengenkripsi raw bytes (untuk gambar/file)."""
+    """
+    Mengenkripsi data menggunakan mode CBC (Cipher Block Chaining).
+    Mode ini PENTING untuk NPCR/UACI yang tinggi.
+    """
     aes = ModifiedAES(key_bytes, sbox, inv_sbox)
     padded_data = pad(data_bytes)
     encrypted = b""
     
+    # Initialization Vector (IV) - Gunakan 0-bytes untuk kesederhanaan demo
+    # (Dalam produksi nyata, IV harus random dan disimpan di awal ciphertext)
+    iv = bytes([0] * 16)
+    prev_block = iv
+    
     # Proses blok per blok
     for i in range(0, len(padded_data), 16):
         block = padded_data[i:i+16]
-        encrypted += aes.encrypt_block(block)
+        
+        # CBC Step: XOR Plaintext Block dengan Previous Ciphertext Block (atau IV)
+        xor_block = bytes([b ^ p for b, p in zip(block, prev_block)])
+        
+        # Encrypt hasil XOR
+        curr_cipher = aes.encrypt_block(xor_block)
+        encrypted += curr_cipher
+        
+        # Update prev_block untuk iterasi berikutnya
+        prev_block = curr_cipher
         
     return encrypted
 
 def decrypt_data(key_bytes, data_bytes, sbox, inv_sbox):
-    """Fungsi generik untuk mendekripsi raw bytes."""
+    """Mendekripsi data menggunakan mode CBC."""
     aes = ModifiedAES(key_bytes, sbox, inv_sbox)
     decrypted = b""
     
+    iv = bytes([0] * 16)
+    prev_block = iv
+    
     for i in range(0, len(data_bytes), 16):
-        block = data_bytes[i:i+16]
-        decrypted += aes.decrypt_block(block)
+        curr_cipher = data_bytes[i:i+16]
+        
+        # Decrypt block dulu
+        decrypted_xor = aes.decrypt_block(curr_cipher)
+        
+        # CBC Step: XOR hasil decrypt dengan Previous Ciphertext Block (atau IV)
+        plaintext_block = bytes([b ^ p for b, p in zip(decrypted_xor, prev_block)])
+        decrypted += plaintext_block
+        
+        # Update prev_block (Ciphertext saat ini menjadi prev untuk berikutnya)
+        prev_block = curr_cipher
         
     return unpad(decrypted)

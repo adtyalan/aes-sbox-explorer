@@ -187,9 +187,104 @@
           display: none !important;
         }
       }
+
+      /* Site Navbar: centered on landing → floating on scroll */
+      .site-nav {
+        position: absolute;
+        top: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 50;
+        transition: all 0.25s ease-in-out;
+      }
+      .site-nav.floating {
+        position: fixed;
+        top: 0.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.12));
+      }
+      .site-nav .menu-popover {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        min-width: 12rem;
+      }
     </style>
   </head>
   <body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+    <!-- Global Navbar (corner → floating on scroll) -->
+    <nav id="siteNav" class="site-nav">
+      <div
+        class="nav-inner flex items-center gap-3 px-3 py-2 rounded-xl bg-white/90 backdrop-blur border border-slate-200 shadow-sm"
+      >
+        <a href="#landing" class="flex items-center gap-2">
+          <img src="assets/unnes.png" alt="UNNES" class="w-6 h-6" />
+          <span class="text-sm font-bold text-slate-800">S-Box Explorer</span>
+        </a>
+
+        <div class="hidden md:flex items-center gap-2 ml-2">
+          <a
+            href="#about"
+            class="px-3 py-1.5 text-xs font-semibold rounded-lg hover:bg-slate-100"
+            >Tentang</a
+          >
+          <a
+            href="#features"
+            class="px-3 py-1.5 text-xs font-semibold rounded-lg hover:bg-slate-100"
+            >Fitur</a
+          >
+          <a
+            href="#team"
+            class="px-3 py-1.5 text-xs font-semibold rounded-lg hover:bg-slate-100"
+            >Tim</a
+          >
+        </div>
+
+        <div class="ml-auto flex items-center gap-2">
+          <button
+            onclick="goToApp()"
+            class="hidden sm:inline-flex px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+          >
+            Mulai App
+          </button>
+          <button
+            id="navToggle"
+            class="md:hidden w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100"
+            aria-label="Menu"
+          >
+            <i class="fa-solid fa-ellipsis-h text-slate-600"></i>
+          </button>
+        </div>
+      </div>
+      <!-- Mobile popover menu -->
+      <div
+        id="navMenu"
+        class="menu-popover hidden md:hidden bg-white/95 backdrop-blur border border-slate-200 rounded-xl p-2 shadow-lg"
+      >
+        <a
+          href="#about"
+          class="block px-3 py-2 text-sm rounded-lg hover:bg-slate-100"
+          >Tentang</a
+        >
+        <a
+          href="#features"
+          class="block px-3 py-2 text-sm rounded-lg hover:bg-slate-100"
+          >Fitur</a
+        >
+        <a
+          href="#team"
+          class="block px-3 py-2 text-sm rounded-lg hover:bg-slate-100"
+          >Tim</a
+        >
+        <button
+          onclick="goToApp()"
+          class="w-full mt-1 px-3 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+        >
+          Mulai App
+        </button>
+      </div>
+    </nav>
     <!-- Landing Page -->
     <section id="landing" class="relative overflow-hidden">
       <div class="absolute inset-0 -z-10">
@@ -408,7 +503,10 @@
       </section>
 
       <!-- Features Bento -->
-      <section class="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 max-w-7xl mx-auto">
+      <section
+        id="features"
+        class="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 max-w-7xl mx-auto"
+      >
         <h2 class="text-2xl font-bold text-slate-900 text-center">
           Fitur & Kelebihan
         </h2>
@@ -483,7 +581,10 @@
       </section>
 
       <!-- Team -->
-      <section class="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 max-w-7xl mx-auto">
+      <section
+        id="team"
+        class="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 max-w-7xl mx-auto"
+      >
         <h2 class="text-2xl font-bold text-slate-900 text-center">
           Tim Pengembang
         </h2>
@@ -609,7 +710,10 @@
             />
           </div>
           <div>
-            <h1 class="font-bold text-lg text-slate-900 leading-tight">
+            <h1
+              onclick="showLanding()"
+              class="font-bold text-lg text-slate-900 leading-tight cursor-pointer hover:text-indigo-600"
+            >
               S-Box Studio
             </h1>
             <p class="text-xs text-slate-500 font-medium">AES Research Tool</p>
@@ -1275,11 +1379,15 @@ Ini adalah pesan rahasia.</textarea
 
     <script>
       // Environment-aware API URL
-      const API_URL =
+      // Prefer local API when running from file or localhost
+      const isLocalHost =
         window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1"
-          ? "http://127.0.0.1:8000" // Local development
-          : "https://aes-sbox-explorer-production.up.railway.app"; // Production (Railway)
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname === "" ||
+        window.location.protocol === "file:";
+      const API_URL = isLocalHost
+        ? "http://127.0.0.1:8000"
+        : "https://aes-sbox-explorer-production.up.railway.app";
       let currentMatrix = Array(8)
         .fill()
         .map((_, i) =>
@@ -1303,20 +1411,35 @@ Ini adalah pesan rahasia.</textarea
       function showLanding() {
         document.getElementById("landing").classList.remove("hidden");
         document.getElementById("appStart").classList.add("hidden");
+        const nav = document.getElementById("siteNav");
+        const footer = document.getElementById("siteFooter");
+        if (nav) nav.classList.remove("hidden");
+        if (footer) footer.classList.remove("hidden");
+        updateNavFloating();
       }
 
       function goToApp() {
         document.getElementById("landing").classList.add("hidden");
         document.getElementById("appStart").classList.remove("hidden");
+        const nav = document.getElementById("siteNav");
+        const footer = document.getElementById("siteFooter");
+        if (nav) nav.classList.add("hidden");
+        if (footer) footer.classList.add("hidden");
         history.pushState({ app: true }, "", "#app");
       }
 
       window.addEventListener("popstate", (event) => {
+        const nav = document.getElementById("siteNav");
+        const footer = document.getElementById("siteFooter");
         if (event.state && event.state.app) {
           document.getElementById("landing").classList.add("hidden");
           document.getElementById("appStart").classList.remove("hidden");
+          if (nav) nav.classList.add("hidden");
+          if (footer) footer.classList.add("hidden");
         } else {
           showLanding();
+          if (nav) nav.classList.remove("hidden");
+          if (footer) footer.classList.remove("hidden");
         }
       });
 
@@ -1871,6 +1994,8 @@ Ini adalah pesan rahasia.</textarea
       // --- ENCRYPT IMAGE (WITH METRICS) ---
       async function encryptImage() {
         if (!imageHexData) return alert("Upload gambar dulu");
+        if (!currentSBox || currentSBox.length !== 256)
+          return alert("Generate S-Box terlebih dahulu");
         const key = document.getElementById("aesKey").value;
         const btn = event.target;
         btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Proses...`;
@@ -1887,6 +2012,18 @@ Ini adalah pesan rahasia.</textarea
               sbox: currentSBox,
             }),
           });
+          if (!res.ok) {
+            // Try to extract API error detail
+            let msg = "Gagal memproses gambar.";
+            try {
+              const err = await res.json();
+              msg = err.detail || JSON.stringify(err);
+            } catch (_) {
+              const txt = await res.text();
+              if (txt) msg = txt;
+            }
+            throw new Error(msg);
+          }
           const data = await res.json();
           currentCipherHex = data.result_hex;
           visualizeNoise(currentCipherHex, "canvasCipher");
@@ -1901,7 +2038,7 @@ Ini adalah pesan rahasia.</textarea
             document.getElementById("imageMetrics").classList.remove("hidden");
           }
         } catch (e) {
-          alert("Error Encrypt Image");
+          alert("Error Encrypt Image: " + (e?.message || e));
         } finally {
           btn.innerText = "Enkripsi";
         }
@@ -1965,6 +2102,55 @@ Ini adalah pesan rahasia.</textarea
       // Init
       renderMatrix();
       loadPresets();
+
+      // Navbar behavior: corner → floating on scroll
+      const siteNav = document.getElementById("siteNav");
+      const navMenu = document.getElementById("navMenu");
+      const navToggle = document.getElementById("navToggle");
+      function updateNavFloating() {
+        if (!siteNav) return;
+        const scrolled = window.scrollY > 64;
+        siteNav.classList.toggle("floating", scrolled);
+      }
+      updateNavFloating();
+      window.addEventListener("scroll", updateNavFloating);
+      window.addEventListener("resize", () => {
+        // Close popover on larger screens
+        if (window.innerWidth >= 768 && navMenu)
+          navMenu.classList.add("hidden");
+      });
+      if (navToggle) {
+        navToggle.addEventListener("click", (e) => {
+          e.stopPropagation();
+          navMenu.classList.toggle("hidden");
+        });
+        // Close when clicking outside
+        document.addEventListener("click", (e) => {
+          if (!e.target.closest("#siteNav")) navMenu.classList.add("hidden");
+        });
+      }
     </script>
+
+    <!-- Footer (landing-only) -->
+    <footer id="siteFooter" class="mt-16 border-t border-slate-200 bg-white/70">
+      <div
+        class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-8 flex flex-col sm:flex-row gap-4 sm:gap-6 items-center justify-between"
+      >
+        <div class="flex items-center gap-3">
+          <img src="assets/unnes.png" alt="UNNES" class="w-8 h-8" />
+          <div>
+            <p class="text-sm font-bold text-slate-800">
+              AES S-Box Explorer Pro
+            </p>
+            <p class="text-xs text-slate-500">
+              UNNES • Research & Learning Tool
+            </p>
+          </div>
+        </div>
+        <p class="text-xs text-slate-500">
+          ©Kelompok AC 2025. All rights reserved.
+        </p>
+      </div>
+    </footer>
   </body>
 </html>
