@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AES S-Box Explorer Pro</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              mono: ["Fira Code", "monospace"],
+            },
+            colors: { primary: "#4f46e5", secondary: "#64748b" },
+            gridTemplateColumns: {
+              16: "repeat(16, minmax(0, 1fr))",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+
+      .fade-in {
+        animation: fadeIn 0.4s ease-out forwards;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .matrix-cell {
+        transition: all 0.2s;
+      }
+      .matrix-cell:hover {
+        transform: scale(1.1);
+        z-index: 10;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Metric tooltip + bar visuals */
+      .metric-card {
+        position: relative;
+        overflow: visible;
+      }
+      .metric-tooltip {
+        position: absolute;
+        left: 50% !important;
+        bottom: 110% !important;
+        transform: translateX(-50%) translateY(10px);
+        width: 280px;
+        background: white !important;
+        color: #1e293b !important; /* Warna text slate-800 */
+        border: 2px solid #6366f1 !important; /* Border indigo */
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2) !important;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        z-index: 9999 !important; /* Pastikan paling depan */
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.2s ease;
+      }
+
+      .metric-tooltip.show {
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: translateX(-50%) translateY(0) !important;
+      }
+      .metric-bar {
+        position: relative;
+        height: 6px;
+        border-radius: 9999px;
+        overflow: hidden;
+        background: #f1f5f9;
+      }
+      .metric-bar-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: #6366f1;
+      }
+      .metric-bar-ideal {
+        position: absolute;
+        top: 0;
+        width: 2px;
+        height: 100%;
+        background: #ef4444;
+      }
+
+      /* Sidebar responsive */
+      .sidebar {
+        transition: transform 0.3s ease-in-out;
+      }
+      @media (max-width: 1024px) {
+        .sidebar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          height: 100vh;
+          transform: translateX(-100%);
+          z-index: 1000 !important;
+        }
+        .sidebar.active {
+          transform: translateX(0);
+        }
+      }
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+        pointer-events: none;
+      }
+      .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+        pointer-events: auto;
+      }
+      @media (min-width: 1025px) {
+        .sidebar-overlay {
+          display: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+    <!-- Landing Page -->
+    <section id="landing" class="relative overflow-hidden">
+      <div class="absolute inset-0 -z-10">
+        <div class="pointer-events-none">
+          <div
+            class="absolute -top-20 -left-20 w-72 h-72 bg-indigo-200/50 blur-3xl rounded-full"
+          ></div>
+          <div
+            class="absolute top-40 -right-20 w-96 h-96 bg-purple-200/40 blur-3xl rounded-full"
+          ></div>
+          <div
+            class="absolute bottom-0 left-1/3 w-80 h-80 bg-sky-200/40 blur-3xl rounded-full"
+          ></div>
+        </div>
+        <div
+          class="bg-gradient-to-b from-white to-slate-50/60 w-full h-full"
+        ></div>
+      </div>
+
+      <!-- Hero -->
+      <div
+        class="px-6 sm:px-8 lg:px-12 py-20 sm:py-24 lg:py-28 max-w-7xl mx-auto"
+      >
+        <div class="text-center space-y-6">
+          <div
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold border border-indigo-200 shadow-sm"
+          >
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>AES S-Box Explorer Pro</span>
+          </div>
+          <h1
+            class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900"
+          >
+            Jelajahi, Bangun, dan Uji S-Box dengan Interaktif
+          </h1>
+          <p class="max-w-2xl mx-auto text-slate-600 text-sm sm:text-base">
+            Platform penelitian ringan untuk eksplorasi matriks, konstruksi
+            S-Box berbasis affine transform, analisis kriptografi, dan demo
+            enkripsi AES.
+          </p>
+          <div class="flex justify-center gap-4 pt-2">
+            <button
+              onclick="goToApp()"
+              class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all hover:scale-[1.02]"
+            >
+              Mulai Eksplorasi
+            </button>
+            <a
+              href="#about"
+              class="px-6 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold shadow-sm hover:shadow transition-all"
+            >
+              Tentang Aplikasi
+            </a>
+          </div>
+        </div>
+
+        <!-- Quick Highlights -->
+        <div class="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div
+            class="group bg-white/70 backdrop-blur p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-table-cells"></i>
+              </div>
+              <div>
+                <p class="text-sm font-bold text-slate-800">Editor Matriks</p>
+                <p class="text-xs text-slate-500">Visual 8×8 interaktif</p>
+              </div>
+            </div>
+          </div>
+          <div
+            class="group bg-white/70 backdrop-blur p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+              </div>
+              <div>
+                <p class="text-sm font-bold text-slate-800">Konstruksi S-Box</p>
+                <p class="text-xs text-slate-500">Affine transform</p>
+              </div>
+            </div>
+          </div>
+          <div
+            class="group bg-white/70 backdrop-blur p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-microscope"></i>
+              </div>
+              <div>
+                <p class="text-sm font-bold text-slate-800">
+                  Analisis 10 Metrik
+                </p>
+                <p class="text-xs text-slate-500">Termasuk NL & DU</p>
+              </div>
+            </div>
+          </div>
+          <div
+            class="group bg-white/70 backdrop-blur p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-lock"></i>
+              </div>
+              <div>
+                <p class="text-sm font-bold text-slate-800">Demo AES</p>
+                <p class="text-xs text-slate-500">Teks & gambar</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- About -->
+      <section
+        id="about"
+        class="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 max-w-6xl mx-auto"
+      >
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div class="lg:col-span-2">
+            <h2 class="text-2xl font-bold text-slate-900">Tentang Aplikasi</h2>
+            <p class="mt-3 text-slate-600 text-sm sm:text-base">
+              Aplikasi ini dirancang untuk mempercepat eksperimen kriptografi
+              pada S-Box AES. Mulai dari merancang matriks, membentuk S-Box,
+              mengevaluasi ketahanan terhadap serangan linear dan diferensial,
+              hingga mencoba enkripsi/dekripsi pada teks maupun gambar.
+            </p>
+            <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div
+                class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow transition"
+              >
+                <p class="text-sm font-bold text-slate-800">
+                  Presets & Randomizer
+                </p>
+                <p class="text-xs text-slate-500">
+                  Mulai cepat dengan preset atau matriks acak.
+                </p>
+              </div>
+              <div
+                class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow transition"
+              >
+                <p class="text-sm font-bold text-slate-800">
+                  Visualisasi Ringkas
+                </p>
+                <p class="text-xs text-slate-500">
+                  Grid responsif + interaksi mikro yang halus.
+                </p>
+              </div>
+              <div
+                class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow transition"
+              >
+                <p class="text-sm font-bold text-slate-800">
+                  Evaluasi Komprehensif
+                </p>
+                <p class="text-xs text-slate-500">
+                  10 metrik, summary value, dan verdict.
+                </p>
+              </div>
+              <div
+                class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow transition"
+              >
+                <p class="text-sm font-bold text-slate-800">
+                  Integrasi Backend
+                </p>
+                <p class="text-xs text-slate-500">
+                  FastAPI lokal untuk proses heavy.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div
+            class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6"
+          >
+            <p class="text-sm font-bold text-slate-800">Tujuan Utama</p>
+            <ul class="mt-3 space-y-2 text-sm text-slate-600">
+              <li class="flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                Mempermudah riset S-Box
+              </li>
+              <li class="flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                Memberi umpan balik cepat
+              </li>
+              <li class="flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                Antarmuka intuitif
+              </li>
+            </ul>
+            <a
+              href="javascript:void(0)"
+              onclick="goToApp()"
+              class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-bold hover:bg-slate-800"
+            >
+              Mulai Sekarang <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features Bento -->
+      <section class="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 max-w-7xl mx-auto">
+        <h2 class="text-2xl font-bold text-slate-900 text-center">
+          Fitur & Kelebihan
+        </h2>
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div
+            class="group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-table-cells-large"></i>
+              </div>
+              <div>
+                <p class="font-bold text-slate-800">Eksplorasi Matriks</p>
+                <p class="text-xs text-slate-500">Editor 8×8 yang responsif.</p>
+              </div>
+            </div>
+          </div>
+          <div
+            class="group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-cubes"></i>
+              </div>
+              <div>
+                <p class="font-bold text-slate-800">Konstruksi S-Box</p>
+                <p class="text-xs text-slate-500">
+                  Affine transform + output hex 16×16.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div
+            class="group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-chart-pie"></i>
+              </div>
+              <div>
+                <p class="font-bold text-slate-800">Analisis Kriptografi</p>
+                <p class="text-xs text-slate-500">
+                  10 metrik + verdict dinamis.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div
+            class="group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-image"></i>
+              </div>
+              <div>
+                <p class="font-bold text-slate-800">Demo Enkripsi</p>
+                <p class="text-xs text-slate-500">
+                  Teks & gambar + metrik NPCR/UACI.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Team -->
+      <section class="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 max-w-7xl mx-auto">
+        <h2 class="text-2xl font-bold text-slate-900 text-center">
+          Tim Pengembang
+        </h2>
+        <p class="text-slate-600 text-sm sm:text-base text-center mt-2">
+          Empat orang di balik desain, riset, dan implementasi.
+        </p>
+        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div
+            class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-user"></i>
+              </div>
+              <div>
+                <p class="font-bold text-slate-800">Hanif Khaylila Fajri</p>
+                <p class="text-xs text-slate-500">
+                  Backend & Analitik Kriptografi - 2304130067
+                </p>
+              </div>
+            </div>
+          </div>
+          <div
+            class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-user"></i>
+              </div>
+              <div>
+                <p class="font-bold text-slate-800">Akbar Nugroho W M</p>
+                <p class="text-xs text-slate-500">
+                  DevOps & Integrasi FastAPI - 2304130070
+                </p>
+              </div>
+            </div>
+          </div>
+          <div
+            class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-user"></i>
+              </div>
+              <div>
+                <p class="font-bold text-slate-800">Ravinasa Deo</p>
+                <p class="text-xs text-slate-500">
+                  Riset S-Box & Paper Review - 2304130048
+                </p>
+              </div>
+            </div>
+          </div>
+          <div
+            class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-user"></i>
+              </div>
+              <div>
+                <p class="font-bold text-slate-800">Alan Aditya</p>
+                <p class="text-xs text-slate-500">
+                  Frontend & UX Micro-interactions - 2304130087
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bottom CTA -->
+      <section class="px-6 sm:px-8 lg:px-12 pb-16 max-w-6xl mx-auto">
+        <div
+          class="bg-white/80 backdrop-blur border border-slate-200 rounded-2xl shadow-sm p-6 sm:p-8 text-center"
+        >
+          <p class="text-sm font-bold text-slate-800">Siap Mencoba?</p>
+          <h3 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-2">
+            Mulai eksplorasi matriks dan bangun S-Box-mu
+          </h3>
+          <p class="text-slate-600 text-sm sm:text-base mt-2">
+            Langsung masuk ke editor matriks, konstruksi S-Box, dan analisis 10
+            metrik dengan satu klik.
+          </p>
+          <div class="mt-6 flex justify-center">
+            <button
+              onclick="goToApp()"
+              class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all hover:scale-[1.02]"
+            >
+              Coba Eksplorasi Matriks
+            </button>
+          </div>
+        </div>
+      </section>
+    </section>
+    <div id="appStart" class="flex hidden">
+      <!-- Sidebar Overlay -->
+      <div
+        id="sidebarOverlay"
+        class="sidebar-overlay"
+        onclick="toggleSidebar()"
+      ></div>
+
+      <aside
+        id="sidebar"
+        class="sidebar w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm z-20"
+      >
+        <div class="p-6 border-b border-slate-100 flex items-center gap-3">
+          <div
+            class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200"
+          >
+            <i class="fa-solid fa-shield-halved text-xl"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-lg text-slate-900 leading-tight">
+              S-Box Studio
+            </h1>
+            <p class="text-xs text-slate-500 font-medium">AES Research Tool</p>
+          </div>
+        </div>
+
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+          <button
+            onclick="showSection('step1')"
+            class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm"
+          >
+            <i class="fa-solid fa-table-cells w-5 text-center"></i> Eksplorasi
+            Matriks
+          </button>
+          <button
+            onclick="showSection('step2')"
+            class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm"
+          >
+            <i class="fa-solid fa-cube w-5 text-center"></i> Konstruksi S-Box
+          </button>
+          <button
+            onclick="showSection('step3')"
+            class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm"
+          >
+            <i class="fa-solid fa-chart-pie w-5 text-center"></i> Analisis
+            Kriptografi
+          </button>
+          <button
+            onclick="showSection('step4')"
+            class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm"
+          >
+            <i class="fa-solid fa-lock w-5 text-center"></i> Demo Enkripsi AES
+          </button>
+        </nav>
+
+        <div class="p-4 border-t border-slate-100">
+          <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+            <div class="flex items-center gap-2">
+              <span
+                class="w-2 h-2 bg-green-500 rounded-full animate-pulse"
+              ></span>
+              <span class="text-xs text-slate-700 font-semibold"
+                >Backend Ready (Local)</span
+              >
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="flex-1 overflow-y-auto bg-slate-50/50 relative">
+        <div
+          class="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-4 flex justify-between items-center"
+        >
+          <div class="flex items-center gap-3">
+            <button
+              onclick="toggleSidebar()"
+              class="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
+              aria-label="Toggle Menu"
+            >
+              <i class="fa-solid fa-bars text-xl text-slate-700"></i>
+            </button>
+            <h2 id="pageTitle" class="text-xl font-bold text-slate-800">
+              Eksplorasi Matriks
+            </h2>
+          </div>
+        </div>
+
+        <div class="p-8 max-w-7xl mx-auto space-y-8 pb-20">
+          <div id="step1" class="section fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div
+                class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit space-y-6"
+              >
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2"
+                    >Pilih Preset</label
+                  >
+                  <div class="relative">
+                    <select
+                      id="presetSelect"
+                      onchange="loadPreset()"
+                      class="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-300 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 appearance-none"
+                    >
+                      <option value="">-- Loading Presets... --</option>
+                    </select>
+                    <div
+                      class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500"
+                    >
+                      <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </div>
+                  </div>
+                  <p class="text-xs text-slate-400 mt-2">
+                    Termasuk AES Standard & Paper Presets.
+                  </p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2"
+                    >Generator</label
+                  >
+                  <button
+                    onclick="generateRandomMatrix()"
+                    class="w-full flex items-center justify-center gap-2 bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100 font-semibold py-2.5 rounded-lg transition-all"
+                  >
+                    <i class="fa-solid fa-dice"></i> Generate Random
+                  </button>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100">
+                  <button
+                    onclick="saveMatrix()"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-200 transition-all flex justify-center items-center gap-2"
+                  >
+                    Lanjut ke Step 2 <i class="fa-solid fa-arrow-right"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div
+                class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2 flex flex-col items-center"
+              >
+                <div class="mb-4 text-center">
+                  <h3 class="font-bold text-slate-800">
+                    Visual Editor Matriks (8x8)
+                  </h3>
+                  <p class="text-sm text-slate-500">
+                    Klik sel untuk mengubah bit (0/1)
+                  </p>
+                </div>
+                <div
+                  id="matrixGrid"
+                  class="grid grid-cols-8 gap-2 p-4 bg-slate-100 rounded-xl border border-slate-200 shadow-inner"
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="step2" class="section hidden fade-in">
+            <div
+              class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center space-y-6"
+            >
+              <div id="sboxIntro" class="max-w-2xl mx-auto">
+                <div
+                  class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-4"
+                >
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-slate-900">
+                  Konstruksi S-Box
+                </h3>
+                <p class="text-slate-500 mt-2">
+                  Membangun S-Box menggunakan Transformasi Affine dengan matriks
+                  ($K$) yang dipilih.
+                </p>
+              </div>
+
+              <button
+                id="btnGenerateSBox"
+                onclick="generateSBox()"
+                class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all"
+              >
+                <i class="fa-solid fa-gears mr-2"></i> Generate Candidate S-Box
+              </button>
+
+              <div id="sboxResult" class="hidden mt-8">
+                <div
+                  id="sboxControls"
+                  class="flex justify-between items-center mb-4 hidden"
+                >
+                  <button
+                    onclick="restartSBox()"
+                    class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center gap-2"
+                  >
+                    <i class="fa-solid fa-rotate-left"></i> Restart
+                  </button>
+                  <button
+                    onclick="showSection('step3')"
+                    class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-md transition-all flex items-center gap-2"
+                  >
+                    Lanjut ke Analisis <i class="fa-solid fa-arrow-right"></i>
+                  </button>
+                </div>
+                <div
+                  class="inline-block p-2 bg-slate-200 rounded-xl border border-slate-300 shadow-inner"
+                >
+                  <div
+                    id="sboxGrid"
+                    class="grid grid-cols-16 gap-1 bg-slate-300 font-mono text-xs sm:text-sm w-full max-w-2xl md:max-w-3xl mx-auto border border-slate-300"
+                    style="grid-template-columns: repeat(16, minmax(0, 1fr))"
+                  ></div>
+                </div>
+                <p class="text-xs text-slate-400 mt-2 font-mono">
+                  Output Hexadecimal (16x16)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div id="step3" class="section hidden fade-in">
+            <div class="flex justify-between items-center mb-6">
+              <div>
+                <h3 class="text-lg font-bold text-slate-800">
+                  Laporan Kriptografi (10 Metrik)
+                </h3>
+                <p class="text-sm text-slate-500">
+                  NL, SAC, BIC, LAP, DAP, DU, AD, TO, CI.
+                </p>
+              </div>
+              <button
+                onclick="analyzeSBox()"
+                class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg font-medium shadow-lg transition-all flex items-center gap-2"
+              >
+                <i class="fa-solid fa-microscope"></i> Jalankan Analisis
+              </button>
+            </div>
+
+            <div id="analyzingText" class="hidden p-12 text-center">
+              <i
+                class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-600 mb-4"
+              ></i>
+              <p class="text-slate-600 font-medium">
+                Sedang menghitung parameter kompleks...
+              </p>
+            </div>
+
+            <div id="analysisResult" class="hidden space-y-6">
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div
+                  class="metric-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors relative"
+                  data-metric="nl"
+                >
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">
+                    1. Nonlinearity
+                  </p>
+                  <p id="m_nl" class="text-2xl font-bold text-indigo-600">-</p>
+                  <p class="text-[10px] text-slate-400">
+                    Target: >100 (Max 112)
+                  </p>
+                  <div class="metric-bar mt-2">
+                    <span class="metric-bar-fill" style="width: 0%"></span>
+                    <span class="metric-bar-ideal" style="left: 100%"></span>
+                  </div>
+                  <div class="metric-tooltip hidden"></div>
+                </div>
+
+                <div
+                  class="metric-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors relative"
+                  data-metric="sac"
+                >
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">
+                    2. SAC
+                  </p>
+                  <p id="m_sac" class="text-2xl font-bold text-indigo-600">-</p>
+                  <p class="text-[10px] text-slate-400">Ideal: 0.5</p>
+                  <div class="metric-bar mt-2">
+                    <span class="metric-bar-fill" style="width: 0%"></span>
+                    <span class="metric-bar-ideal" style="left: 50%"></span>
+                  </div>
+                  <div class="metric-tooltip hidden"></div>
+                </div>
+
+                <div
+                  class="metric-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors relative"
+                  data-metric="bicnl"
+                >
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">
+                    3. BIC-NL
+                  </p>
+                  <p id="m_bicnl" class="text-2xl font-bold text-indigo-600">
+                    -
+                  </p>
+                  <p class="text-[10px] text-slate-400">
+                    Independence (Nonlin)
+                  </p>
+                  <div class="metric-bar mt-2">
+                    <span class="metric-bar-fill" style="width: 0%"></span>
+                    <span class="metric-bar-ideal" style="left: 100%"></span>
+                  </div>
+                  <div class="metric-tooltip hidden"></div>
+                </div>
+
+                <div
+                  class="metric-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors relative"
+                  data-metric="bicsac"
+                >
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">
+                    4. BIC-SAC
+                  </p>
+                  <p id="m_bicsac" class="text-2xl font-bold text-indigo-600">
+                    -
+                  </p>
+                  <p class="text-[10px] text-slate-400">Independence (Aval)</p>
+                  <div class="metric-bar mt-2">
+                    <span class="metric-bar-fill" style="width: 0%"></span>
+                    <span class="metric-bar-ideal" style="left: 50%"></span>
+                  </div>
+                  <div class="metric-tooltip hidden"></div>
+                </div>
+
+                <div
+                  class="metric-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors relative"
+                  data-metric="lap"
+                >
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">
+                    5. Linear Prob (LAP)
+                  </p>
+                  <p id="m_lap" class="text-2xl font-bold text-indigo-600">-</p>
+                  <p class="text-[10px] text-slate-400">Bias Max</p>
+                  <div class="metric-bar mt-2">
+                    <span class="metric-bar-fill" style="width: 0%"></span>
+                    <span class="metric-bar-ideal" style="left: 50%"></span>
+                  </div>
+                  <div class="metric-tooltip hidden"></div>
+                </div>
+
+                <div
+                  class="metric-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors relative"
+                  data-metric="dap"
+                >
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">
+                    6. Max DAP
+                  </p>
+                  <p id="m_dap" class="text-2xl font-bold text-indigo-600">-</p>
+                  <p class="text-[10px] text-slate-400">Diff. Approx Prob</p>
+                  <div class="metric-bar mt-2">
+                    <span class="metric-bar-fill" style="width: 0%"></span>
+                    <span class="metric-bar-ideal" style="left: 100%"></span>
+                  </div>
+                  <div class="metric-tooltip hidden"></div>
+                </div>
+
+                <div
+                  class="metric-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors relative"
+                  data-metric="du"
+                >
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">
+                    7. Diff. Uniformity (DU)
+                  </p>
+                  <p id="m_du" class="text-2xl font-bold text-indigo-600">-</p>
+                  <p class="text-[10px] text-slate-400">Ideal: 4</p>
+                  <div class="metric-bar mt-2">
+                    <span class="metric-bar-fill" style="width: 0%"></span>
+                    <span class="metric-bar-ideal" style="left: 25%"></span>
+                  </div>
+                  <div class="metric-tooltip hidden"></div>
+                </div>
+
+                <div
+                  class="metric-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors relative"
+                  data-metric="ad"
+                >
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">
+                    8. Alg. Degree (AD)
+                  </p>
+                  <p id="m_ad" class="text-2xl font-bold text-indigo-600">-</p>
+                  <p class="text-[10px] text-slate-400">Ideal: 7</p>
+                  <div class="metric-bar mt-2">
+                    <span class="metric-bar-fill" style="width: 0%"></span>
+                    <span class="metric-bar-ideal" style="left: 100%"></span>
+                  </div>
+                  <div class="metric-tooltip hidden"></div>
+                </div>
+
+                <div
+                  class="metric-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors relative"
+                  data-metric="to"
+                >
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">
+                    9. Transp. Order (TO)
+                  </p>
+                  <p id="m_to" class="text-2xl font-bold text-indigo-600">-</p>
+                  <p class="text-[10px] text-slate-400">Side-Channel Res.</p>
+                  <div class="metric-bar mt-2">
+                    <span class="metric-bar-fill" style="width: 0%"></span>
+                    <span class="metric-bar-ideal" style="left: 100%"></span>
+                  </div>
+                  <div class="metric-tooltip hidden"></div>
+                </div>
+
+                <div
+                  class="metric-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors relative"
+                  data-metric="ci"
+                >
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">
+                    10. Corr. Immunity (CI)
+                  </p>
+                  <p id="m_ci" class="text-2xl font-bold text-indigo-600">-</p>
+                  <p class="text-[10px] text-slate-400">High Order CI</p>
+                  <div class="metric-bar mt-2">
+                    <span class="metric-bar-fill" style="width: 0%"></span>
+                    <span class="metric-bar-ideal" style="left: 100%"></span>
+                  </div>
+                  <div class="metric-tooltip hidden"></div>
+                </div>
+
+                <div
+                  class="metric-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors md:col-span-3 lg:col-span-2 bg-slate-50 relative"
+                  data-metric="sv"
+                >
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">
+                    Summary: Strength Value (SV)
+                  </p>
+                  <p id="m_sv" class="text-2xl font-bold text-indigo-600">-</p>
+                  <p class="text-[10px] text-slate-400">
+                    Semakin kecil, semakin baik (Formula Paper)
+                  </p>
+                  <div class="metric-bar mt-2">
+                    <span class="metric-bar-fill" style="width: 0%"></span>
+                    <span class="metric-bar-ideal" style="left: 0%"></span>
+                  </div>
+                  <div class="metric-tooltip hidden"></div>
+                </div>
+              </div>
+
+              <div
+                id="verdict"
+                class="p-4 rounded-lg border-l-4 font-medium flex items-center gap-3"
+              ></div>
+
+              <div
+                id="metricsExplain"
+                class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4"
+              >
+                <h4 class="text-lg font-bold text-slate-800">
+                  Penjelasan Metrik
+                </h4>
+                <div class="space-y-3 text-sm text-slate-600">
+                  Hover atau klik kartu metrik di atas untuk melihat penjelasan
+                  singkat dan grafik perbandingan terhadap standar.
+                </div>
+              </div>
+
+              <div
+                id="postAnalysisCTA"
+                class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl flex items-center justify-between hidden"
+              >
+                <p class="text-sm text-indigo-800 font-medium">
+                  Laporan selesai. Ingin melihat dampaknya pada data nyata? Coba
+                  fitur enkripsi/dekripsi teks atau gambar.
+                </p>
+                <button
+                  onclick="showSection('step4')"
+                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow"
+                >
+                  Coba Enkripsi/Dekripsi
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="step4" class="section hidden fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div
+                class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit space-y-5"
+              >
+                <h3 class="font-bold text-slate-800 border-b pb-2">
+                  Konfigurasi
+                </h3>
+                <div>
+                  <label
+                    class="block text-xs font-bold text-slate-500 uppercase mb-2"
+                    >Kunci (16 Karakter)</label
+                  >
+                  <input
+                    type="text"
+                    id="aesKey"
+                    value="KunciRahasia1234"
+                    maxlength="16"
+                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono focus:ring-indigo-500"
+                  />
+                </div>
+                <div class="flex p-1 bg-slate-100 rounded-lg">
+                  <button
+                    onclick="toggleDemoTab('text')"
+                    id="btnTabText"
+                    class="flex-1 py-1.5 text-sm font-medium rounded-md shadow bg-white text-indigo-600"
+                  >
+                    Teks
+                  </button>
+                  <button
+                    onclick="toggleDemoTab('image')"
+                    id="btnTabImage"
+                    class="flex-1 py-1.5 text-sm font-medium rounded-md text-slate-500"
+                  >
+                    Gambar
+                  </button>
+                </div>
+              </div>
+
+              <div
+                class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2"
+              >
+                <div id="tabText" class="space-y-6">
+                  <div>
+                    <label
+                      class="block text-xs font-bold text-slate-500 uppercase mb-2"
+                      >Plaintext</label
+                    >
+                    <textarea
+                      id="plainTextInput"
+                      rows="3"
+                      class="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg text-sm"
+                    >
+Ini adalah pesan rahasia.</textarea
+                    >
+                    <div class="mt-2 flex justify-end">
+                      <button
+                        onclick="encryptText()"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow"
+                      >
+                        Enkripsi
+                      </button>
+                    </div>
+                  </div>
+                  <div class="relative flex justify-center py-2">
+                    <span
+                      class="bg-white px-2 text-xs text-slate-400 uppercase border-t border-slate-200 w-full text-center pt-2"
+                      >Output</span
+                    >
+                  </div>
+                  <div>
+                    <label
+                      class="block text-xs font-bold text-slate-500 uppercase mb-2"
+                      >Ciphertext (Hex)</label
+                    >
+                    <textarea
+                      id="cipherTextOutput"
+                      readonly
+                      rows="3"
+                      class="w-full p-3 bg-slate-100 border border-slate-200 rounded-lg text-sm font-mono text-slate-600"
+                    ></textarea>
+                    <div class="mt-2 flex justify-end items-center gap-4">
+                      <p
+                        id="textDecryptedResult"
+                        class="text-sm font-medium text-emerald-600 mr-auto"
+                      ></p>
+                      <button
+                        onclick="decryptText()"
+                        class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow"
+                      >
+                        Dekripsi
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="tabImage" class="hidden space-y-6">
+                  <label
+                    class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100"
+                  >
+                    <div
+                      class="flex flex-col items-center justify-center pt-5 pb-6"
+                    >
+                      <i
+                        class="fa-solid fa-cloud-arrow-up text-2xl text-slate-400 mb-2"
+                      ></i>
+                      <p class="text-sm text-slate-500">
+                        Upload Gambar (JPG/PNG)
+                      </p>
+                    </div>
+                    <input
+                      id="imageInput"
+                      type="file"
+                      class="hidden"
+                      accept="image/*"
+                    />
+                  </label>
+
+                  <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="space-y-2">
+                      <p class="text-xs font-bold text-slate-500">Asli</p>
+                      <div
+                        class="bg-slate-100 rounded-lg p-2 flex justify-center"
+                      >
+                        <canvas id="canvasOriginal" class="max-w-full"></canvas>
+                      </div>
+                    </div>
+                    <div class="space-y-2">
+                      <p class="text-xs font-bold text-slate-500">Noise</p>
+                      <div
+                        class="bg-slate-100 rounded-lg p-2 flex justify-center"
+                      >
+                        <canvas id="canvasCipher" class="max-w-full"></canvas>
+                      </div>
+                    </div>
+                    <div class="space-y-2">
+                      <p class="text-xs font-bold text-slate-500">Hasil</p>
+                      <div
+                        class="bg-slate-100 rounded-lg p-2 flex justify-center"
+                      >
+                        <canvas
+                          id="canvasDecrypted"
+                          class="max-w-full"
+                        ></canvas>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    id="imageMetrics"
+                    class="hidden grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100"
+                  >
+                    <div class="bg-slate-50 p-3 rounded-lg border text-center">
+                      <p class="text-xs text-slate-500 font-bold">ENTROPY</p>
+                      <p
+                        id="val_entropy"
+                        class="text-lg font-bold text-indigo-600"
+                      >
+                        -
+                      </p>
+                      <p class="text-[10px] text-slate-400">Ideal: ~8.0</p>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border text-center">
+                      <p class="text-xs text-slate-500 font-bold">NPCR</p>
+                      <p
+                        id="val_npcr"
+                        class="text-lg font-bold text-indigo-600"
+                      >
+                        -
+                      </p>
+                      <p class="text-[10px] text-slate-400">Ideal: >99.6%</p>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border text-center">
+                      <p class="text-xs text-slate-500 font-bold">UACI</p>
+                      <p
+                        id="val_uaci"
+                        class="text-lg font-bold text-indigo-600"
+                      >
+                        -
+                      </p>
+                      <p class="text-[10px] text-slate-400">Ideal: ~33.4%</p>
+                    </div>
+                  </div>
+
+                  <div
+                    class="flex justify-center gap-4 pt-4 border-t border-slate-100"
+                  >
+                    <button
+                      onclick="encryptImage()"
+                      class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow"
+                    >
+                      Enkripsi
+                    </button>
+                    <button
+                      onclick="decryptImage()"
+                      class="bg-emerald-500 text-white px-6 py-2 rounded-lg text-sm font-bold shadow"
+                    >
+                      Dekripsi
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const API_URL = "http://127.0.0.1:8000";
+      let currentMatrix = Array(8)
+        .fill()
+        .map((_, i) =>
+          Array(8)
+            .fill(0)
+            .map((_, j) => (i === j ? 1 : 0))
+        );
+      let currentSBox = [];
+      let imageHexData = "",
+        currentCipherHex = "";
+
+      // Sidebar toggle
+      function toggleSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("sidebarOverlay");
+        sidebar.classList.toggle("active");
+        overlay.classList.toggle("active");
+      }
+
+      // View toggles
+      function showLanding() {
+        document.getElementById("landing").classList.remove("hidden");
+        document.getElementById("appStart").classList.add("hidden");
+      }
+
+      function goToApp() {
+        document.getElementById("landing").classList.add("hidden");
+        document.getElementById("appStart").classList.remove("hidden");
+        history.pushState({ app: true }, "", "#app");
+      }
+
+      window.addEventListener("popstate", (event) => {
+        if (event.state && event.state.app) {
+          document.getElementById("landing").classList.add("hidden");
+          document.getElementById("appStart").classList.remove("hidden");
+        } else {
+          showLanding();
+        }
+      });
+
+      // Set initial state
+      history.replaceState({ landing: true }, "", location.pathname);
+
+      // UI Utils
+      function showSection(id) {
+        // Close sidebar on mobile after navigation
+        if (window.innerWidth < 1024) {
+          const sidebar = document.getElementById("sidebar");
+          const overlay = document.getElementById("sidebarOverlay");
+          sidebar.classList.remove("active");
+          overlay.classList.remove("active");
+        }
+
+        document
+          .querySelectorAll(".section")
+          .forEach((el) => el.classList.add("hidden"));
+        document.getElementById(id).classList.remove("hidden");
+        const titles = {
+          step1: "Eksplorasi Matriks",
+          step2: "Konstruksi S-Box",
+          step3: "Analisis Kriptografi",
+          step4: "Demo Enkripsi",
+        };
+        document.getElementById("pageTitle").innerText = titles[id];
+        document
+          .querySelectorAll(".nav-btn")
+          .forEach(
+            (btn) =>
+              (btn.className = btn.getAttribute("onclick").includes(id)
+                ? "nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm bg-indigo-50 text-indigo-600"
+                : "nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm text-slate-600 hover:bg-slate-50")
+          );
+      }
+      showSection("step1");
+
+      function toggleDemoTab(type) {
+        document
+          .getElementById("tabText")
+          .classList.toggle("hidden", type !== "text");
+        document
+          .getElementById("tabImage")
+          .classList.toggle("hidden", type === "text");
+        const active =
+            "flex-1 py-1.5 text-sm font-medium rounded-md shadow bg-white text-indigo-600",
+          inactive =
+            "flex-1 py-1.5 text-sm font-medium rounded-md text-slate-500 hover:text-slate-700";
+        document.getElementById("btnTabText").className =
+          type === "text" ? active : inactive;
+        document.getElementById("btnTabImage").className =
+          type === "image" ? active : inactive;
+      }
+
+      // MATRIX
+      function renderMatrix() {
+        const grid = document.getElementById("matrixGrid");
+        grid.innerHTML = "";
+        currentMatrix.forEach((row, r) => {
+          row.forEach((val, c) => {
+            const div = document.createElement("div");
+            div.className = `matrix-cell w-full aspect-square rounded cursor-pointer flex items-center justify-center font-mono text-sm font-bold select-none border shadow-sm ${
+              val
+                ? "bg-indigo-600 border-indigo-700 text-white"
+                : "bg-white border-slate-200 text-slate-300 hover:border-indigo-300"
+            }`;
+            div.innerText = val;
+            div.onclick = () => {
+              currentMatrix[r][c] = val ? 0 : 1;
+              renderMatrix();
+            };
+            grid.appendChild(div);
+          });
+        });
+      }
+
+      async function loadPresets() {
+        try {
+          const res = await fetch(`${API_URL}/presets`);
+          const data = await res.json();
+          const select = document.getElementById("presetSelect");
+          select.innerHTML = '<option value="">-- Pilih Preset --</option>';
+          for (const [name, mat] of Object.entries(data)) {
+            const opt = document.createElement("option");
+            opt.value = JSON.stringify(mat);
+            opt.innerText = name;
+            select.appendChild(opt);
+          }
+        } catch (e) {
+          console.error("API error", e);
+        }
+      }
+
+      function loadPreset() {
+        const val = document.getElementById("presetSelect").value;
+        if (val) {
+          currentMatrix = JSON.parse(val);
+          renderMatrix();
+        }
+      }
+
+      async function generateRandomMatrix() {
+        try {
+          const res = await fetch(`${API_URL}/random-matrix`);
+          const data = await res.json();
+          currentMatrix = data.matrix;
+          renderMatrix();
+          document.getElementById("presetSelect").value = "";
+        } catch (e) {
+          alert("Gagal koneksi ke backend!");
+        }
+      }
+
+      function saveMatrix() {
+        showSection("step2");
+      }
+
+      // S-BOX
+      async function generateSBox() {
+        try {
+          const res = await fetch(`${API_URL}/generate-sbox`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ matrix: currentMatrix }),
+          });
+          const data = await res.json();
+          currentSBox = data.sbox;
+
+          const grid = document.getElementById("sboxGrid");
+          grid.innerHTML = "";
+          currentSBox.forEach((val) => {
+            const div = document.createElement("div");
+            div.className =
+              "bg-white aspect-square flex items-center justify-center text-slate-600 hover:bg-indigo-100 hover:text-indigo-700 hover:z-10 hover:scale-150 hover:shadow-lg transition-transform cursor-crosshair";
+            div.innerText = val.toString(16).padStart(2, "0").toUpperCase();
+            grid.appendChild(div);
+          });
+          document.getElementById("sboxResult").classList.remove("hidden");
+          document.getElementById("sboxControls").classList.remove("hidden");
+          const intro = document.getElementById("sboxIntro");
+          if (intro) intro.classList.add("hidden");
+          const genBtn = document.getElementById("btnGenerateSBox");
+          if (genBtn) genBtn.classList.add("hidden");
+        } catch (e) {
+          alert("Error generating S-Box");
+        }
+      }
+
+      function restartSBox() {
+        // Reset view to initial state
+        currentSBox = [];
+        const grid = document.getElementById("sboxGrid");
+        if (grid) grid.innerHTML = "";
+        document.getElementById("sboxResult").classList.add("hidden");
+        const controls = document.getElementById("sboxControls");
+        if (controls) controls.classList.add("hidden");
+        const intro = document.getElementById("sboxIntro");
+        if (intro) intro.classList.remove("hidden");
+        const genBtn = document.getElementById("btnGenerateSBox");
+        if (genBtn) genBtn.classList.remove("hidden");
+      }
+
+      // --- METRIC METADATA & HELPERS (GLOBAL) ---
+      const METRIC_META = {
+        nl: {
+          label: "Nonlinearity",
+          explain:
+            "Mengukur jarak Hamming minimum ke fungsi linear. Semakin tinggi, semakin kuat terhadap serangan linear.",
+          domain: [0, 112],
+          ideal: 112,
+          direction: "higher",
+        },
+        sac: {
+          label: "SAC",
+          explain:
+            "Strict Avalanche Criterion: ketika 1 bit input berubah, ~50% bit output ikut berubah.",
+          domain: [0, 1],
+          ideal: 0.5,
+          direction: "target",
+        },
+        bicnl: {
+          label: "BIC-NL",
+          explain:
+            "Bit Independence dari sisi nonlinearity. Semakin tinggi menunjukkan kemandirian bit yang baik.",
+          domain: [0, 1],
+          ideal: 1,
+          direction: "higher",
+        },
+        bicsac: {
+          label: "BIC-SAC",
+          explain:
+            "Bit Independence dari sisi avalanche (SAC). Nilai ideal mendekati 0.5.",
+          domain: [0, 1],
+          ideal: 0.5,
+          direction: "target",
+        },
+        lap: {
+          label: "LAP",
+          explain:
+            "Linear Approximation Probability (bias maksimum). Semakin kecil bias, semakin baik.",
+          domain: [0, 0.125],
+          ideal: 0.0625,
+          direction: "lower",
+        },
+        dap: {
+          label: "Max DAP",
+          explain:
+            "Differential Approximation Probability maksimum. Semakin kecil peluang, semakin baik.",
+          domain: [0, 0.25],
+          ideal: 0.25,
+          direction: "lower",
+        },
+        du: {
+          label: "DU",
+          explain:
+            "Differential Uniformity: keseragaman output untuk perbedaan input. Ideal AES adalah 4 (lebih kecil lebih baik).",
+          domain: [0, 16],
+          ideal: 4,
+          direction: "lower",
+        },
+        ad: {
+          label: "Alg. Degree",
+          explain:
+            "Derajat aljabar polinomial Boolean. Nilai tinggi (≈7) meningkatkan resistensi beberapa serangan.",
+          domain: [0, 7],
+          ideal: 7,
+          direction: "higher",
+        },
+        to: {
+          label: "Transparency Order",
+          explain:
+            "Ukuran resistensi terhadap serangan side-channel. Nilai lebih tinggi umumnya lebih baik.",
+          domain: [0, 1],
+          ideal: 1,
+          direction: "higher",
+        },
+        ci: {
+          label: "Correlation Immunity",
+          explain:
+            "Ketahanan terhadap korelasi input-output orde tinggi. Nilai lebih tinggi umumnya lebih baik.",
+          domain: [0, 8],
+          ideal: 8,
+          direction: "higher",
+        },
+        sv: {
+          label: "Strength Value",
+          explain:
+            "Ringkasan gabungan metrik. Semakin kecil nilai SV (menurut formula paper), semakin kuat.",
+          domain: [0, 1],
+          ideal: 0,
+          direction: "lower",
+        },
+      };
+
+      function percentFor(name, val) {
+        const meta = METRIC_META[name];
+        if (!meta) return { p: 0, ip: 0 };
+        const [min, max] = meta.domain || [0, 1];
+        const clamp = (x) => Math.max(0, Math.min(1, x));
+        let p = clamp((val - min) / (max - min));
+        let ip = clamp((meta.ideal - min) / (max - min));
+        return { p: Math.round(p * 100), ip: Math.round(ip * 100) };
+      }
+
+      function statusText(name, val) {
+        const meta = METRIC_META[name];
+        if (!meta) return "-";
+        const ideal = meta.ideal;
+        if (meta.direction === "target") {
+          const diff = Math.abs(val - ideal);
+          const tol = (meta.domain[1] - meta.domain[0]) * 0.02; // 2% domain tolerance
+          return diff <= tol
+            ? "Sangat dekat ideal"
+            : val > ideal
+            ? "Sedikit di atas ideal"
+            : "Sedikit di bawah ideal";
+        }
+        if (meta.direction === "higher") {
+          return val >= ideal ? "Lebih baik/ideal" : "Di bawah standar";
+        }
+        if (meta.direction === "lower") {
+          return val <= ideal ? "Lebih baik/ideal" : "Lebih buruk";
+        }
+        return "—";
+      }
+
+      function fmt(name, val) {
+        const map = {
+          sac: 5,
+          bicsac: 4,
+          bicnl: 2,
+          lap: 4,
+          dap: 5,
+          to: 4,
+          sv: 4,
+        };
+        const d = map[name];
+        if (typeof val !== "number") return val;
+        return typeof d === "number" ? Number(val.toFixed(d)) : val;
+      }
+
+      function updateMetricCard(name, val) {
+        const card = document.querySelector(
+          `.metric-card[data-metric="${name}"]`
+        );
+        if (!card) return;
+
+        const meta = METRIC_META[name];
+        const { p, ip } = percentFor(name, val); // Hitung bar presentase
+
+        // Isi konten Tooltip secara dinamis
+        const tip = card.querySelector(".metric-tooltip");
+        if (tip) {
+          tip.innerHTML = `
+            <div class="space-y-2">
+                <div class="flex items-center gap-2 text-indigo-600 font-bold">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Apa itu ${meta.label}?</span>
+                </div>
+                <p class="text-slate-600 leading-relaxed">${meta.explain}</p>
+                <div class="pt-2 border-t border-slate-100 text-[10px]">
+                    <span class="text-slate-400">Target Ideal:</span> 
+                    <span class="font-mono text-slate-700">${meta.ideal}</span>
+                </div>
+            </div>
+        `;
+        }
+
+        // Update bar visual di kartu (opsional)
+        const fill = card.querySelector(".metric-bar-fill");
+        if (fill) fill.style.width = p + "%";
+      }
+
+      function initMetricInteractions() {
+        const cards = document.querySelectorAll(".metric-card");
+
+        cards.forEach((card) => {
+          const tip = card.querySelector(".metric-tooltip");
+          if (!tip) return;
+
+          // Remove any existing listeners by cloning
+          const newCard = card.cloneNode(true);
+          card.parentNode.replaceChild(newCard, card);
+
+          const newTip = newCard.querySelector(".metric-tooltip");
+          if (!newTip) return;
+
+          // Hover for desktop
+          newCard.addEventListener("mouseenter", () => {
+            newTip.classList.remove("hidden");
+            newTip.classList.add("show");
+          });
+
+          newCard.addEventListener("mouseleave", () => {
+            newTip.classList.remove("show");
+            setTimeout(() => {
+              if (!newTip.classList.contains("show")) {
+                newTip.classList.add("hidden");
+              }
+            }, 200);
+          });
+
+          // Click for mobile/tablet
+          newCard.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isShowing = newTip.classList.contains("show");
+            // Close all other tooltips
+            document.querySelectorAll(".metric-tooltip").forEach((t) => {
+              t.classList.remove("show");
+              t.classList.add("hidden");
+            });
+            // Toggle this one
+            if (!isShowing) {
+              newTip.classList.remove("hidden");
+              newTip.classList.add("show");
+            }
+          });
+        });
+
+        // Close tooltips when clicking outside
+        document.addEventListener("click", (e) => {
+          if (!e.target.closest(".metric-card")) {
+            document.querySelectorAll(".metric-tooltip").forEach((t) => {
+              t.classList.remove("show");
+              t.classList.add("hidden");
+            });
+          }
+        });
+      }
+
+      // --- ANALYSIS (FIXED: 10 METRICS + SV) ---
+      async function analyzeSBox() {
+        if (!currentSBox.length)
+          return alert("Generate S-Box terlebih dahulu!");
+        document.getElementById("analyzingText").classList.remove("hidden");
+        document.getElementById("analysisResult").classList.add("hidden");
+
+        try {
+          const res = await fetch(`${API_URL}/analyze`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sbox: currentSBox }),
+          });
+          const data = await res.json();
+          document.getElementById("analyzingText").classList.add("hidden");
+          document.getElementById("analysisResult").classList.remove("hidden");
+
+          const setVal = (id, val) =>
+            (document.getElementById(id).innerText = val);
+
+          // MAPPING SEMUA 10 METRIK + SV
+          setVal("m_nl", data.nl);
+          setVal("m_sac", data.sac.toFixed(5));
+          setVal("m_du", data.du);
+          setVal("m_bicnl", data.bic_nl.toFixed(2));
+          setVal("m_bicsac", data.bic_sac.toFixed(4));
+          setVal("m_dap", data.dap.toFixed(5));
+          setVal("m_lap", data.lap.toFixed(4));
+          setVal("m_ad", data.ad);
+          setVal("m_ci", data.ci);
+          setVal("m_to", data.to ? data.to.toFixed(4) : "-");
+          setVal("m_sv", data.sv.toFixed(4));
+
+          // Update per-card bars and tooltips
+          updateMetricCard("nl", data.nl);
+          updateMetricCard("sac", data.sac);
+          updateMetricCard("bicnl", data.bic_nl);
+          updateMetricCard("bicsac", data.bic_sac);
+          updateMetricCard("lap", data.lap);
+          updateMetricCard("dap", data.dap);
+          updateMetricCard("du", data.du);
+          updateMetricCard("ad", data.ad);
+          updateMetricCard("to", data.to || 0);
+          updateMetricCard("ci", data.ci);
+          updateMetricCard("sv", data.sv);
+
+          // Init interactions after populating cards
+          initMetricInteractions();
+
+          const verdict = document.getElementById("verdict");
+          if (data.nl >= 112 && data.du <= 4) {
+            verdict.className =
+              "p-4 rounded-lg border-l-4 font-medium flex items-center gap-3 bg-emerald-50 border-emerald-500 text-emerald-800";
+            verdict.innerHTML = `<i class="fa-solid fa-circle-check text-xl"></i> <div><strong>EXCELLENT S-BOX</strong><br><span class="text-sm opacity-80">S-Box yang sangat kuat, menunjukkan nonlinearity maksimum (≈112) dan uniformitas diferensial ideal (DU=4). Kombinasi ini umumnya tahan terhadap serangan linear dan diferensial, serta memberikan efek avalanche yang baik. Cocok untuk skenario produksi dan penelitian lanjutan.</span></div>`;
+          } else if (data.nl >= 100) {
+            verdict.className =
+              "p-4 rounded-lg border-l-4 font-medium flex items-center gap-3 bg-amber-50 border-amber-500 text-amber-800";
+            verdict.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-xl"></i> <div><strong>GOOD S-BOX</strong><br><span class="text-sm opacity-80">S-Box cukup baik: nonlinearity tinggi (≥100) dengan karakteristik yang mendekati standar. Masih layak digunakan, namun optimasi lebih lanjut disarankan untuk meningkatkan ketahanan terhadap serangan tertentu.</span></div>`;
+          } else {
+            verdict.className =
+              "p-4 rounded-lg border-l-4 font-medium flex items-center gap-3 bg-rose-50 border-rose-500 text-rose-800";
+            verdict.innerHTML = `<i class="fa-solid fa-circle-xmark text-xl"></i> <div><strong>WEAK S-BOX</strong><br><span class="text-sm opacity-80">S-Box kurang kuat: nonlinearity rendah atau uniformitas diferensial buruk. Rentan terhadap serangan linear/diferensial dan tidak disarankan untuk penggunaan kriptografi.</span></div>`;
+          }
+
+          // Penjelasan kini tersedia via tooltip per kartu; bagian ini diringkas.
+          const explain = document.getElementById("metricsExplain");
+          if (explain) {
+            const container = explain.querySelector(".space-y-3");
+            if (container) {
+              container.innerHTML =
+                "Hover atau klik kartu untuk detail setiap metrik dan grafik perbandingan.";
+            }
+          }
+
+          // Tampilkan CTA untuk uji enkripsi/dekripsi
+          const cta = document.getElementById("postAnalysisCTA");
+          if (cta) cta.classList.remove("hidden");
+        } catch (e) {
+          alert("Analysis Error: " + e);
+        }
+      }
+
+      // --- ENCRYPT ---
+      async function encryptText() {
+        const key = document.getElementById("aesKey").value;
+        const text = document.getElementById("plainTextInput").value;
+        const res = await fetch(`${API_URL}/encrypt-text`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, plaintext: text, sbox: currentSBox }),
+        });
+        const data = await res.json();
+        document.getElementById("cipherTextOutput").value = data.ciphertext;
+        document.getElementById("textDecryptedResult").innerText = "";
+      }
+
+      async function decryptText() {
+        const key = document.getElementById("aesKey").value;
+        const cipher = document.getElementById("cipherTextOutput").value;
+        try {
+          const res = await fetch(`${API_URL}/decrypt-text`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              key,
+              ciphertext_hex: cipher,
+              sbox: currentSBox,
+            }),
+          });
+          const data = await res.json();
+          if (data.detail) throw data.detail;
+          document.getElementById(
+            "textDecryptedResult"
+          ).innerHTML = `<i class="fa-solid fa-check mr-1"></i> ${data.plaintext}`;
+        } catch (e) {
+          document.getElementById(
+            "textDecryptedResult"
+          ).innerHTML = `<span class="text-rose-600">Gagal Dekripsi</span>`;
+        }
+      }
+
+      document
+        .getElementById("imageInput")
+        .addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          const reader = new FileReader();
+          reader.onload = function (evt) {
+            const img = new Image();
+            img.onload = function () {
+              const scale = 100 / img.width;
+              const h = img.height * scale;
+              const canvas = document.getElementById("canvasOriginal");
+              canvas.width = 100;
+              canvas.height = h;
+              const ctx = canvas.getContext("2d");
+              ctx.drawImage(img, 0, 0, 100, h);
+              const dataUrl = canvas.toDataURL("image/png");
+              const raw = atob(dataUrl.split(",")[1]);
+              let result = "";
+              for (let i = 0; i < raw.length; i++)
+                result += raw.charCodeAt(i).toString(16).padStart(2, "0");
+              imageHexData = result;
+            };
+            img.src = evt.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+
+      // --- ENCRYPT IMAGE (WITH METRICS) ---
+      async function encryptImage() {
+        if (!imageHexData) return alert("Upload gambar dulu");
+        const key = document.getElementById("aesKey").value;
+        const btn = event.target;
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Proses...`;
+
+        document.getElementById("imageMetrics").classList.add("hidden");
+
+        try {
+          const res = await fetch(`${API_URL}/process-image?mode=encrypt`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              key,
+              image_hex: imageHexData,
+              sbox: currentSBox,
+            }),
+          });
+          const data = await res.json();
+          currentCipherHex = data.result_hex;
+          visualizeNoise(currentCipherHex, "canvasCipher");
+
+          if (data.entropy !== undefined) {
+            document.getElementById("val_entropy").innerText =
+              data.entropy.toFixed(4);
+            document.getElementById("val_npcr").innerText =
+              data.npcr.toFixed(4) + "%";
+            document.getElementById("val_uaci").innerText =
+              data.uaci.toFixed(4) + "%";
+            document.getElementById("imageMetrics").classList.remove("hidden");
+          }
+        } catch (e) {
+          alert("Error Encrypt Image");
+        } finally {
+          btn.innerText = "Enkripsi";
+        }
+      }
+
+      async function decryptImage() {
+        if (!currentCipherHex) return alert("Enkripsi dulu");
+        const key = document.getElementById("aesKey").value;
+        const btn = event.target;
+        btn.innerText = "Processing...";
+        try {
+          const res = await fetch(`${API_URL}/process-image?mode=decrypt`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              key,
+              image_hex: currentCipherHex,
+              sbox: currentSBox,
+            }),
+          });
+          const data = await res.json();
+          const hex = data.result_hex;
+          let bytes = new Uint8Array(hex.length / 2);
+          for (let i = 0; i < hex.length; i += 2)
+            bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+          const img = new Image();
+          img.onload = function () {
+            const canvas = document.getElementById("canvasDecrypted");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            canvas.getContext("2d").drawImage(img, 0, 0);
+          };
+          img.src = URL.createObjectURL(
+            new Blob([bytes], { type: "image/png" })
+          );
+        } catch (e) {
+          alert("Gagal Dekripsi");
+        } finally {
+          btn.innerText = "Dekripsi";
+        }
+      }
+
+      function visualizeNoise(hexString, canvasId) {
+        const bytesLen = hexString.length / 2;
+        const side = Math.ceil(Math.sqrt(bytesLen));
+        const canvas = document.getElementById(canvasId);
+        canvas.width = side;
+        canvas.height = side;
+        const ctx = canvas.getContext("2d");
+        const imgData = ctx.createImageData(side, side);
+        for (let i = 0; i < bytesLen; i++) {
+          const val = parseInt(hexString.substr(i * 2, 2), 16);
+          imgData.data[i * 4] = val;
+          imgData.data[i * 4 + 1] = val;
+          imgData.data[i * 4 + 2] = val;
+          imgData.data[i * 4 + 3] = 255;
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+
+      // Init
+      renderMatrix();
+      loadPresets();
+    </script>
+  </body>
+</html>
