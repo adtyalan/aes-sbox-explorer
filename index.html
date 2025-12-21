@@ -95,6 +95,36 @@
         visibility: visible !important;
         transform: translateX(-50%) translateY(0) !important;
       }
+
+      /* Mobile optimization */
+      @media (max-width: 768px) {
+        .metric-tooltip {
+          width: 220px !important;
+          padding: 0.75rem !important;
+          font-size: 0.8rem !important;
+        }
+        .metric-tooltip .space-y-2 > div:first-child {
+          font-size: 0.85rem !important;
+        }
+        .metric-tooltip p {
+          font-size: 0.75rem !important;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .metric-tooltip {
+          width: 200px !important;
+          padding: 0.65rem !important;
+          font-size: 0.75rem !important;
+        }
+        .metric-tooltip .space-y-2 > div:first-child {
+          font-size: 0.8rem !important;
+        }
+        .metric-tooltip p {
+          font-size: 0.7rem !important;
+        }
+      }
+
       .metric-bar {
         position: relative;
         height: 6px;
@@ -1605,7 +1635,17 @@ Ini adalah pesan rahasia.</textarea
       }
 
       function initMetricInteractions() {
+        // Detect if device supports touch
+        const isTouchDevice = () => {
+          return (
+            "ontouchstart" in window ||
+            navigator.maxTouchPoints > 0 ||
+            navigator.msMaxTouchPoints > 0
+          );
+        };
+
         const cards = document.querySelectorAll(".metric-card");
+        const touchDevice = isTouchDevice();
 
         cards.forEach((card) => {
           const tip = card.querySelector(".metric-tooltip");
@@ -1618,22 +1658,24 @@ Ini adalah pesan rahasia.</textarea
           const newTip = newCard.querySelector(".metric-tooltip");
           if (!newTip) return;
 
-          // Hover for desktop
-          newCard.addEventListener("mouseenter", () => {
-            newTip.classList.remove("hidden");
-            newTip.classList.add("show");
-          });
+          // Desktop: Use hover
+          if (!touchDevice) {
+            newCard.addEventListener("mouseenter", () => {
+              newTip.classList.remove("hidden");
+              newTip.classList.add("show");
+            });
 
-          newCard.addEventListener("mouseleave", () => {
-            newTip.classList.remove("show");
-            setTimeout(() => {
-              if (!newTip.classList.contains("show")) {
-                newTip.classList.add("hidden");
-              }
-            }, 200);
-          });
+            newCard.addEventListener("mouseleave", () => {
+              newTip.classList.remove("show");
+              setTimeout(() => {
+                if (!newTip.classList.contains("show")) {
+                  newTip.classList.add("hidden");
+                }
+              }, 200);
+            });
+          }
 
-          // Click for mobile/tablet
+          // Mobile/Tablet & Desktop: Click to toggle
           newCard.addEventListener("click", (e) => {
             e.stopPropagation();
             const isShowing = newTip.classList.contains("show");
