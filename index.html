@@ -1227,7 +1227,13 @@ Ini adalah pesan rahasia.</textarea
     </div>
 
     <script>
-      const API_URL = "http://127.0.0.1:8000";
+      // Environment-aware API URL
+      const API_URL =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? "http://127.0.0.1:8000" // Local development
+          : "aes-sbox-explorer-production.up.railway.app"; // Production (Railway)
+
       let currentMatrix = Array(8)
         .fill()
         .map((_, i) =>
