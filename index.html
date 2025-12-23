@@ -14,6 +14,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 
     <script>
       tailwind.config = {
@@ -883,6 +884,90 @@
                 <i class="fa-solid fa-gears mr-2"></i> Generate Candidate S-Box
               </button>
 
+              <!-- FITUR BARU: Upload S-Box dari Excel -->
+              <div class="my-6 pt-6 border-t border-slate-200">
+                <p class="text-sm font-semibold text-slate-600 mb-4">
+                  <i class="fa-solid fa-file-excel text-green-600 mr-2"></i>
+                  Atau Upload S-Box Existing dari Excel
+                </p>
+                <div class="flex flex-col gap-3">
+                  <input
+                    type="file"
+                    id="excelUpload"
+                    accept=".xlsx,.xls,.csv"
+                    class="hidden"
+                    onchange="handleExcelUpload(event)"
+                  />
+                  <button
+                    onclick="document.getElementById('excelUpload').click()"
+                    class="px-6 py-3 bg-green-100 hover:bg-green-200 text-green-700 border-2 border-green-300 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+                  >
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Pilih File Excel
+                  </button>
+                  <div id="uploadStatus" class="text-sm text-slate-500"></div>
+                </div>
+              </div>
+
+              <div
+                id="excelUploadResult"
+                class="hidden mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl"
+              >
+                <div class="flex items-center gap-2 mb-3">
+                  <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                  <p class="font-bold text-emerald-900" id="uploadResultTitle">
+                    S-Box Berhasil Diupload
+                  </p>
+                </div>
+                <div
+                  id="uploadDetails"
+                  class="text-sm text-emerald-800 space-y-2 mb-4"
+                >
+                  <p><strong>Format:</strong> <span id="excelFormat"></span></p>
+                  <p>
+                    <strong>Status:</strong> <span id="excelValidation"></span>
+                  </p>
+                </div>
+                <div
+                  id="excelAnalysisInfo"
+                  class="text-xs text-slate-600 bg-white p-3 rounded border border-slate-200 hidden"
+                >
+                  <p class="font-semibold mb-2">Hasil Analisis Awal:</p>
+                  <div
+                    id="excelAnalysisData"
+                    class="grid grid-cols-2 gap-2"
+                  ></div>
+                </div>
+                <button
+                  onclick="useUploadedSBox()"
+                  class="mt-4 w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all"
+                >
+                  Gunakan S-Box Ini untuk Analisis
+                </button>
+              </div>
+
+              <div
+                id="excelErrorResult"
+                class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-xl"
+              >
+                <div class="flex items-center gap-2 mb-2">
+                  <i class="fa-solid fa-circle-xmark text-red-600"></i>
+                  <p class="font-bold text-red-900">Upload Gagal</p>
+                </div>
+                <p class="text-sm text-red-800" id="excelErrorMsg"></p>
+              </div>
+
+              <div
+                id="excelUploading"
+                class="hidden mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-center"
+              >
+                <i
+                  class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600 mb-2"
+                ></i>
+                <p class="text-sm text-blue-800 font-medium">
+                  Sedang memproses file Excel...
+                </p>
+              </div>
+
               <div id="sboxResult" class="hidden mt-8">
                 <div
                   id="sboxControls"
@@ -1263,6 +1348,124 @@ Ini adalah pesan rahasia.</textarea
                       </button>
                     </div>
                   </div>
+
+                  <!-- HISTOGRAM SECTION FOR TEXT ENCRYPTION -->
+                  <div
+                    id="textHistogramSection"
+                    class="hidden mt-8 pt-8 border-t border-slate-200"
+                  >
+                    <div class="flex items-center justify-between mb-4">
+                      <div>
+                        <h3
+                          class="text-lg font-bold text-slate-900 flex items-center gap-2"
+                        >
+                          <i
+                            class="fa-solid fa-chart-column text-indigo-600"
+                          ></i>
+                          Distribusi Byte Ciphertext
+                        </h3>
+                        <p class="text-sm text-slate-500 mt-1">
+                          Histogram frekuensi nilai byte (0-255) dari hasil
+                          enkripsi
+                        </p>
+                      </div>
+                      <button
+                        onclick="toggleHistogramInfo('text')"
+                        class="text-slate-400 hover:text-slate-600 text-lg"
+                        title="Info Histogram"
+                      >
+                        <i class="fa-solid fa-circle-question"></i>
+                      </button>
+                    </div>
+
+                    <div
+                      id="textHistogramInfo"
+                      class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-slate-700 space-y-2"
+                    >
+                      <p><strong>📊 Apa itu Histogram?</strong></p>
+                      <p>
+                        Histogram menunjukkan
+                        <strong>frekuensi kemunculan setiap nilai byte</strong>
+                        (0-255) dalam ciphertext. Sumbu X adalah nilai byte,
+                        sumbu Y adalah jumlah kemunkulan.
+                      </p>
+                      <p><strong>🔍 Interpretasi:</strong></p>
+                      <ul class="ml-4 space-y-1 list-disc">
+                        <li>
+                          ✓ <strong>Distribusi merata:</strong> Ciphertext tidak
+                          memiliki pola, enkripsi kuat
+                        </li>
+                        <li>
+                          ✓ <strong>Tidak ada pola:</strong> Setiap byte value
+                          muncul dengan frekuensi serupa
+                        </li>
+                        <li>
+                          ✗ <strong>Pola terlihat:</strong> Bisa menunjukkan
+                          kelemahan enkripsi
+                        </li>
+                        <li>
+                          ✗
+                          <strong>Lonjakan tinggi di nilai tertentu:</strong>
+                          Indikasi pola tidak acak
+                        </li>
+                      </ul>
+                      <p>
+                        <strong>💡 Target Ideal:</strong> Histogram yang "datar"
+                        (uniform distribution) menunjukkan enkripsi yang baik
+                      </p>
+                    </div>
+
+                    <div
+                      class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm"
+                    >
+                      <canvas
+                        id="textHistogramChart"
+                        style="max-height: 300px"
+                      ></canvas>
+                    </div>
+
+                    <div
+                      id="textHistogramStats"
+                      class="mt-4 grid grid-cols-4 gap-4 text-center text-sm"
+                    >
+                      <div class="bg-slate-50 p-3 rounded-lg">
+                        <p class="text-slate-500 font-bold text-xs">MIN FREQ</p>
+                        <p
+                          id="textHistMin"
+                          class="text-lg font-bold text-indigo-600"
+                        >
+                          -
+                        </p>
+                      </div>
+                      <div class="bg-slate-50 p-3 rounded-lg">
+                        <p class="text-slate-500 font-bold text-xs">MAX FREQ</p>
+                        <p
+                          id="textHistMax"
+                          class="text-lg font-bold text-indigo-600"
+                        >
+                          -
+                        </p>
+                      </div>
+                      <div class="bg-slate-50 p-3 rounded-lg">
+                        <p class="text-slate-500 font-bold text-xs">MEAN</p>
+                        <p
+                          id="textHistMean"
+                          class="text-lg font-bold text-indigo-600"
+                        >
+                          -
+                        </p>
+                      </div>
+                      <div class="bg-slate-50 p-3 rounded-lg">
+                        <p class="text-slate-500 font-bold text-xs">STDEV</p>
+                        <p
+                          id="textHistStdev"
+                          class="text-lg font-bold text-indigo-600"
+                        >
+                          -
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div id="tabImage" class="hidden space-y-6">
@@ -1313,6 +1516,128 @@ Ini adalah pesan rahasia.</textarea
                           id="canvasDecrypted"
                           class="max-w-full"
                         ></canvas>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- HISTOGRAM SECTION FOR IMAGE ENCRYPTION -->
+                  <div
+                    id="imageHistogramSection"
+                    class="hidden mt-8 pt-8 border-t border-slate-200"
+                  >
+                    <div class="flex items-center justify-between mb-4">
+                      <div>
+                        <h3
+                          class="text-lg font-bold text-slate-900 flex items-center gap-2"
+                        >
+                          <i
+                            class="fa-solid fa-chart-column text-indigo-600"
+                          ></i>
+                          Distribusi Byte Ciphertext Gambar
+                        </h3>
+                        <p class="text-sm text-slate-500 mt-1">
+                          Histogram frekuensi nilai pixel dari hasil enkripsi
+                          gambar
+                        </p>
+                      </div>
+                      <button
+                        onclick="toggleHistogramInfo('image')"
+                        class="text-slate-400 hover:text-slate-600 text-lg"
+                        title="Info Histogram"
+                      >
+                        <i class="fa-solid fa-circle-question"></i>
+                      </button>
+                    </div>
+
+                    <div
+                      id="imageHistogramInfo"
+                      class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-slate-700 space-y-2"
+                    >
+                      <p><strong>📊 Apa itu Histogram?</strong></p>
+                      <p>
+                        Histogram menunjukkan
+                        <strong
+                          >frekuensi kemunculan setiap nilai intensitas
+                          pixel</strong
+                        >
+                        (0-255) dalam gambar terenkripsi. Sumbu X adalah
+                        intensitas pixel, sumbu Y adalah jumlah pixel dengan
+                        intensitas tersebut.
+                      </p>
+                      <p><strong>🔍 Interpretasi:</strong></p>
+                      <ul class="ml-4 space-y-1 list-disc">
+                        <li>
+                          ✓ <strong>Distribusi merata:</strong> Gambar
+                          terenkripsi dengan baik, mirip noise acak
+                        </li>
+                        <li>
+                          ✓ <strong>Histogram flat/uniform:</strong> Setiap
+                          nilai intensitas muncul dengan frekuensi serupa
+                        </li>
+                        <li>
+                          ✗ <strong>Pola terlihat:</strong> Ada struktur yang
+                          masih terlihat dalam ciphertext
+                        </li>
+                        <li>
+                          ✗ <strong>Spike/lonjakan:</strong> Menunjukkan ada
+                          informasi yang bocor dari plaintext
+                        </li>
+                      </ul>
+                      <p>
+                        <strong>💡 Target Ideal:</strong> Histogram yang sangat
+                        flat (uniform) menunjukkan enkripsi gambar yang sangat
+                        baik dan aman
+                      </p>
+                    </div>
+
+                    <div
+                      class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm"
+                    >
+                      <canvas
+                        id="imageHistogramChart"
+                        style="max-height: 300px"
+                      ></canvas>
+                    </div>
+
+                    <div
+                      id="imageHistogramStats"
+                      class="mt-4 grid grid-cols-4 gap-4 text-center text-sm"
+                    >
+                      <div class="bg-slate-50 p-3 rounded-lg">
+                        <p class="text-slate-500 font-bold text-xs">MIN FREQ</p>
+                        <p
+                          id="imageHistMin"
+                          class="text-lg font-bold text-indigo-600"
+                        >
+                          -
+                        </p>
+                      </div>
+                      <div class="bg-slate-50 p-3 rounded-lg">
+                        <p class="text-slate-500 font-bold text-xs">MAX FREQ</p>
+                        <p
+                          id="imageHistMax"
+                          class="text-lg font-bold text-indigo-600"
+                        >
+                          -
+                        </p>
+                      </div>
+                      <div class="bg-slate-50 p-3 rounded-lg">
+                        <p class="text-slate-500 font-bold text-xs">MEAN</p>
+                        <p
+                          id="imageHistMean"
+                          class="text-lg font-bold text-indigo-600"
+                        >
+                          -
+                        </p>
+                      </div>
+                      <div class="bg-slate-50 p-3 rounded-lg">
+                        <p class="text-slate-500 font-bold text-xs">STDEV</p>
+                        <p
+                          id="imageHistStdev"
+                          class="text-lg font-bold text-indigo-600"
+                        >
+                          -
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1843,6 +2168,114 @@ Ini adalah pesan rahasia.</textarea
         });
       }
 
+      // --- EXCEL UPLOAD FUNCTIONS (FITUR BARU) ---
+      async function handleExcelUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Show uploading state
+        document.getElementById("excelUploading").classList.remove("hidden");
+        document.getElementById("excelUploadResult").classList.add("hidden");
+        document.getElementById("excelErrorResult").classList.add("hidden");
+        document.getElementById("uploadStatus").textContent = "";
+
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          const response = await fetch(
+            "http://localhost:8000/upload-excel-sbox",
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+
+          const result = await response.json();
+
+          if (result.success) {
+            // Success case
+            currentSBox = result.sbox;
+
+            document.getElementById("excelFormat").textContent =
+              result.source_format;
+            document.getElementById("excelValidation").textContent =
+              result.validation;
+
+            // Show analysis data if available
+            if (result.analysis && !result.analysis.error) {
+              const analysisDiv = document.getElementById("excelAnalysisData");
+              analysisDiv.innerHTML = `
+                <div><span class="font-semibold">NL:</span> ${result.analysis.nonlinearity}</div>
+                <div><span class="font-semibold">SAC:</span> ${result.analysis.sac}</div>
+                <div><span class="font-semibold">DAC:</span> ${result.analysis.dac}</div>
+                <div><span class="font-semibold">PC:</span> ${result.analysis.pc}</div>
+                <div><span class="font-semibold">BD:</span> ${result.analysis.bd}</div>
+              `;
+              document
+                .getElementById("excelAnalysisInfo")
+                .classList.remove("hidden");
+            }
+
+            document.getElementById("excelUploading").classList.add("hidden");
+            document
+              .getElementById("excelUploadResult")
+              .classList.remove("hidden");
+            document.getElementById(
+              "uploadStatus"
+            ).textContent = `✓ ${result.message}`;
+          } else {
+            // Error case
+            document.getElementById("excelUploading").classList.add("hidden");
+            document
+              .getElementById("excelErrorResult")
+              .classList.remove("hidden");
+            document.getElementById("excelErrorMsg").textContent =
+              result.error || "Terjadi kesalahan saat membaca file";
+          }
+        } catch (e) {
+          document.getElementById("excelUploading").classList.add("hidden");
+          document
+            .getElementById("excelErrorResult")
+            .classList.remove("hidden");
+          document.getElementById(
+            "excelErrorMsg"
+          ).textContent = `Error: ${e.message}. Pastikan server API sedang berjalan di http://localhost:8000`;
+          console.error("Upload error:", e);
+        }
+      }
+
+      function useUploadedSBox() {
+        if (!currentSBox || currentSBox.length !== 256) {
+          alert("S-Box tidak valid atau belum diupload");
+          return;
+        }
+
+        // Hide intro and generate button
+        const intro = document.getElementById("sboxIntro");
+        if (intro) intro.classList.add("hidden");
+        const genBtn = document.getElementById("btnGenerateSBox");
+        if (genBtn) genBtn.classList.add("hidden");
+
+        // Collapse upload UI
+        document.getElementById("excelUploadResult").classList.add("hidden");
+
+        // Show S-Box result
+        renderSBoxMatrix();
+
+        // Show the result section
+        const sboxResult = document.getElementById("sboxResult");
+        if (sboxResult) sboxResult.classList.remove("hidden");
+
+        const sboxControls = document.getElementById("sboxControls");
+        if (sboxControls) sboxControls.classList.remove("hidden");
+
+        // Alert user
+        alert(
+          "✓ S-Box dari Excel berhasil digunakan!\nAnda sekarang bisa melanjutkan ke analisis."
+        );
+      }
+
       // --- ANALYSIS (FIXED: 10 METRICS + SV) ---
       async function analyzeSBox() {
         if (!currentSBox.length)
@@ -1937,6 +2370,9 @@ Ini adalah pesan rahasia.</textarea
         const data = await res.json();
         document.getElementById("cipherTextOutput").value = data.ciphertext;
         document.getElementById("textDecryptedResult").innerText = "";
+
+        // Show histogram
+        showTextHistogram(data.ciphertext);
       }
 
       async function decryptText() {
@@ -1962,6 +2398,195 @@ Ini adalah pesan rahasia.</textarea
             "textDecryptedResult"
           ).innerHTML = `<span class="text-rose-600">Gagal Dekripsi</span>`;
         }
+      }
+
+      // --- HISTOGRAM FUNCTIONS ---
+      function toggleHistogramInfo(type) {
+        const infoId =
+          type === "text" ? "textHistogramInfo" : "imageHistogramInfo";
+        const element = document.getElementById(infoId);
+        element.classList.toggle("hidden");
+      }
+
+      function calculateHistogram(hexString) {
+        // Convert hex string to byte array
+        const bytes = [];
+        for (let i = 0; i < hexString.length; i += 2) {
+          bytes.push(parseInt(hexString.substr(i, 2), 16));
+        }
+
+        // Calculate frequency for each byte value (0-255)
+        const freq = new Array(256).fill(0);
+        for (let byte of bytes) {
+          if (!isNaN(byte) && byte >= 0 && byte <= 255) {
+            freq[byte]++;
+          }
+        }
+
+        return freq;
+      }
+
+      function calculateStatistics(freq) {
+        const nonZeroFreqs = freq.filter((f) => f > 0);
+        const min = Math.min(...nonZeroFreqs);
+        const max = Math.max(...nonZeroFreqs);
+        const mean =
+          nonZeroFreqs.reduce((a, b) => a + b, 0) / nonZeroFreqs.length;
+
+        // Standard deviation
+        const variance =
+          nonZeroFreqs.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) /
+          nonZeroFreqs.length;
+        const stdev = Math.sqrt(variance);
+
+        return { min, max, mean, stdev };
+      }
+
+      let textChartInstance = null;
+      function showTextHistogram(cipherHex) {
+        const histogramSection = document.getElementById(
+          "textHistogramSection"
+        );
+        const freq = calculateHistogram(cipherHex);
+        const stats = calculateStatistics(freq);
+
+        // Update statistics display
+        document.getElementById("textHistMin").textContent =
+          stats.min.toFixed(0);
+        document.getElementById("textHistMax").textContent =
+          stats.max.toFixed(0);
+        document.getElementById("textHistMean").textContent =
+          stats.mean.toFixed(2);
+        document.getElementById("textHistStdev").textContent =
+          stats.stdev.toFixed(2);
+
+        // Show histogram section
+        histogramSection.classList.remove("hidden");
+
+        // Create Chart.js histogram
+        const ctx = document
+          .getElementById("textHistogramChart")
+          .getContext("2d");
+
+        // Destroy existing chart if any
+        if (textChartInstance) {
+          textChartInstance.destroy();
+        }
+
+        textChartInstance = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: Array.from({ length: 256 }, (_, i) => i),
+            datasets: [
+              {
+                label: "Frekuensi",
+                data: freq,
+                backgroundColor: "rgba(99, 102, 241, 0.6)",
+                borderColor: "rgba(99, 102, 241, 1)",
+                borderWidth: 0,
+                barThickness: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { display: true, position: "top" },
+              tooltip: {
+                callbacks: {
+                  title: (context) => `Byte Value: ${context[0].label}`,
+                  label: (context) => `Frekuensi: ${context.raw}`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                title: { display: true, text: "Nilai Byte (0-255)" },
+                ticks: { maxTicksLimit: 20 },
+              },
+              y: {
+                title: { display: true, text: "Jumlah Kemunculan" },
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+      }
+
+      let imageChartInstance = null;
+      function showImageHistogram(cipherHex) {
+        const histogramSection = document.getElementById(
+          "imageHistogramSection"
+        );
+        const freq = calculateHistogram(cipherHex);
+        const stats = calculateStatistics(freq);
+
+        // Update statistics display
+        document.getElementById("imageHistMin").textContent =
+          stats.min.toFixed(0);
+        document.getElementById("imageHistMax").textContent =
+          stats.max.toFixed(0);
+        document.getElementById("imageHistMean").textContent =
+          stats.mean.toFixed(2);
+        document.getElementById("imageHistStdev").textContent =
+          stats.stdev.toFixed(2);
+
+        // Show histogram section
+        histogramSection.classList.remove("hidden");
+
+        // Create Chart.js histogram
+        const ctx = document
+          .getElementById("imageHistogramChart")
+          .getContext("2d");
+
+        // Destroy existing chart if any
+        if (imageChartInstance) {
+          imageChartInstance.destroy();
+        }
+
+        imageChartInstance = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: Array.from({ length: 256 }, (_, i) => i),
+            datasets: [
+              {
+                label: "Frekuensi Pixel",
+                data: freq,
+                backgroundColor: "rgba(139, 92, 246, 0.6)",
+                borderColor: "rgba(139, 92, 246, 1)",
+                borderWidth: 0,
+                barThickness: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { display: true, position: "top" },
+              tooltip: {
+                callbacks: {
+                  title: (context) => `Intensitas Pixel: ${context[0].label}`,
+                  label: (context) => `Jumlah Pixel: ${context.raw}`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: "Nilai Intensitas Pixel (0-255)",
+                },
+                ticks: { maxTicksLimit: 20 },
+              },
+              y: {
+                title: { display: true, text: "Jumlah Pixel" },
+                beginAtZero: true,
+              },
+            },
+          },
+        });
       }
 
       document
@@ -2027,6 +2652,9 @@ Ini adalah pesan rahasia.</textarea
           const data = await res.json();
           currentCipherHex = data.result_hex;
           visualizeNoise(currentCipherHex, "canvasCipher");
+
+          // Show histogram
+          showImageHistogram(currentCipherHex);
 
           if (data.entropy !== undefined) {
             document.getElementById("val_entropy").innerText =
